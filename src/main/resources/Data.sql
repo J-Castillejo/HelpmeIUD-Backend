@@ -1,4 +1,4 @@
-create database Helpmeiud;
+create database helpmeiud;
 use helpmeiud;
 
 select * from usuarios u ;
