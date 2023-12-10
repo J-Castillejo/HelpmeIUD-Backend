@@ -2,12 +2,10 @@ package co.edu.iudigital.app.services.impl;
 
 import co.edu.iudigital.app.dto.request.UsuarioDTORequest;
 import co.edu.iudigital.app.dto.response.UsuarioDTO;
-import co.edu.iudigital.app.exceptions.BadRequestException;
-import co.edu.iudigital.app.exceptions.ErrorDto;
-import co.edu.iudigital.app.exceptions.InternalServerErrorException;
-import co.edu.iudigital.app.exceptions.RestException;
+import co.edu.iudigital.app.exceptions.*;
 import co.edu.iudigital.app.models.Role;
 import co.edu.iudigital.app.models.Usuario;
+import co.edu.iudigital.app.repositories.IRoleRepository;
 import co.edu.iudigital.app.repositories.IUsuarioRepository;
 import co.edu.iudigital.app.services.iface.IUsuarioService;
 import co.edu.iudigital.app.util.ConstUtil;
@@ -31,13 +29,14 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class UsuarioServiceImpl implements IUsuarioService, UserDetailsService {
 
-    @Value("emailserver.enabled")
+    @Value("${emailserver.enabled}")
     private Boolean emailEnabled;
     @Lazy
     @Autowired
@@ -45,6 +44,9 @@ public class UsuarioServiceImpl implements IUsuarioService, UserDetailsService {
 
     @Autowired
     private IUsuarioRepository usuarioRepository; //inyeccion de dependencia por atributo
+
+    @Autowired
+    private IRoleRepository roleRepository;
 
     @Autowired
     private EmailService emailService;
@@ -66,14 +68,12 @@ public class UsuarioServiceImpl implements IUsuarioService, UserDetailsService {
     }
 
     @Override
-    public UsuarioDTO guardar(UsuarioDTORequest usuarioDTORequest) throws RestException{
-
+    @Transactional
+    public UsuarioDTO guardar(UsuarioDTORequest usuarioDTORequest) throws RestException {
         Usuario usuario;
-        Role role = new Role();
-        role.setId(2L);
 
         usuario = usuarioRepository.findByUserName(usuarioDTORequest.getUserName());
-        if(usuario != null){
+        if (usuario != null) {
             throw new BadRequestException(
                     ErrorDto.builder()
                             .status(HttpStatus.BAD_REQUEST.value())
@@ -93,17 +93,22 @@ public class UsuarioServiceImpl implements IUsuarioService, UserDetailsService {
         usuario.setPassword(passwordEncoder.encode(usuarioDTORequest.getPassword()));
         usuario.setFechaNacimiento(usuarioDTORequest.getFechaNacimiento());
         usuario.setImagen(usuarioDTORequest.getImagen());
-        usuario.setDisponibilidad(true);
-        usuario.setRedSocial(false);
+        usuario.setEnabled(usuarioDTORequest.isEnabled());
+        usuario.setRedSocial(usuarioDTORequest.getRedSocial());
+
+        // Obtén el Role de la solicitud UsuarioDTORequest
+        Role role = getRoleFromRequest(usuarioDTORequest);
+
+        // Asigna el Role al usuario
         usuario.setRoles(Collections.singletonList(role));
 
-        usuario =  usuarioRepository.save(usuario);
+        usuario = usuarioRepository.save(usuario);
 
         // Convertir Usuario a UsuarioDTORequest
-        if(usuario!= null && usuario.getUserName() != null) {
-            if(Boolean.TRUE.equals(emailEnabled)) {
-                String mensaje = "Su usuario: "+usuario.getUserName()+"; password: "+usuarioDTORequest.getPassword();
-                String asunto = "Registro en HelmeIUD";
+        if (usuario != null && usuario.getUserName() != null) {
+            if (Boolean.TRUE.equals(emailEnabled)) {
+                String mensaje = "Su usuario: " + usuario.getUserName() + "; password: " + usuarioDTORequest.getPassword();
+                String asunto = "Registro en HelpmeIUD";
                 emailService.sendEmail(
                         mensaje,
                         usuario.getUserName(),
@@ -116,7 +121,7 @@ public class UsuarioServiceImpl implements IUsuarioService, UserDetailsService {
                 .userName(usuario.getUserName())
                 .nombre(usuario.getNombre())
                 .apellido(usuario.getApellido())
-                .disponibilidad(usuario.isDisponibilidad())
+                .enabled(usuario.isEnabled())
                 .fechaNacimiento(usuario.getFechaNacimiento())
                 .redSocial(usuario.getRedSocial())
                 .imagen(usuario.getImagen())
@@ -125,6 +130,17 @@ public class UsuarioServiceImpl implements IUsuarioService, UserDetailsService {
                         .collect(Collectors.toList()))
                 .build();
     }
+
+    private Role getRoleFromRequest(UsuarioDTORequest usuarioDTORequest) {
+        Long roleId = usuarioDTORequest.getRoles() != null && !usuarioDTORequest.getRoles().isEmpty()
+                ? usuarioDTORequest.getRoles().get(0)
+                : null;
+
+        return roleId != null ? roleRepository.findById(roleId)
+                .orElseThrow(() -> new RoleNotFoundException("Role not found with ID: " + roleId))
+                : null;
+    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -216,6 +232,6 @@ public class UsuarioServiceImpl implements IUsuarioService, UserDetailsService {
             log.info("Rol {}", authority.getAuthority());
             authorities.add(authority);
         }
-        return new User(usuario.getUserName(), usuario.getPassword(), usuario.isDisponibilidad(), true, true, true,authorities);
+        return new User(usuario.getUserName(), usuario.getPassword(), usuario.isEnabled(), true, true, true,authorities);
     }
 }

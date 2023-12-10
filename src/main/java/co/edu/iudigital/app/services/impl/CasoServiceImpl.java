@@ -41,7 +41,6 @@ public class CasoServiceImpl implements ICasoService {
         log.info("Listando todos los casos {}");
         List<Caso> casos = casoRepository.findAll();
 
-        // Programación funcional: lambdas Java
         return casos.stream().map(caso ->
                 CasoDTO.builder()
                         .id(caso.getId())
@@ -62,9 +61,9 @@ public class CasoServiceImpl implements ICasoService {
 
     @Transactional
     @Override
-    public Caso crear(CasoDTO casoDTO) throws RestException {
-
-        Optional<Usuario> usuarioOptional = usuarioRepository.findById(casoDTO.getUsuarioId());
+    public Caso crear(CasoDTO casoDTO)
+            throws RestException {
+        Optional<Usuario>  usuarioOptional = usuarioRepository.findById(casoDTO.getUsuarioId());
 
         Optional<Delito> delitoOptional = delitoRepository.findById(casoDTO.getDelitoId());
 
@@ -80,6 +79,7 @@ public class CasoServiceImpl implements ICasoService {
             );
         }
 
+
         Caso caso = new Caso();
 
         caso.setFechaHora(casoDTO.getFechaHora());
@@ -94,7 +94,6 @@ public class CasoServiceImpl implements ICasoService {
         caso.setDelito(delitoOptional.get());
 
         return casoRepository.save(caso);
-
     }
 
     @Transactional
