@@ -71,7 +71,7 @@ public class AuthServerConfig extends AuthorizationServerConfigurerAdapter {
                 .tokenEnhancer(tokenEnhancerChain);//
     }
 
-    // Ruta del login debe ser pública (servicio de autenticación)
+    // Ruta del login debe ser pública [ servicio de autenticación ]
     @Override
     public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
         security
