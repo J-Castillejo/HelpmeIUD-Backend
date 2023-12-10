@@ -10,12 +10,13 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+
 @Entity
 @Table(name = "casos")
 @Getter
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Caso implements Serializable {
+public class Caso implements Serializable{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

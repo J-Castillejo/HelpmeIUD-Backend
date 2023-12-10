@@ -1,5 +1,6 @@
 package co.edu.iudigital.app.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -45,16 +46,22 @@ public class Usuario implements Serializable {
     String imagen;
 
     @Column
-    boolean disponibilidad;
+    boolean enabled;
 
     /*@OneToMany*/
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinTable(
             name = "roles_usuario",
             joinColumns = {@JoinColumn(name = "usuarios_id")},
             inverseJoinColumns = {@JoinColumn(name = "roles_id")}
     )
+
+    @JsonIgnore
     List<Role> roles;
 
+    public Usuario() {
+        this.enabled = true;  // Valor por defecto para 'enabled si no se agrega'
+        this.redSocial = false;  // Valor por defecto para 'redSocial si no se agrega'
+    }
 }

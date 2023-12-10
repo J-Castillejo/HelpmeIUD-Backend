@@ -5,6 +5,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
+import org.codehaus.jackson.annotate.JsonBackReference;
+import org.codehaus.jackson.annotate.JsonIgnore;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -29,5 +31,6 @@ public class Role implements Serializable {
 
     // Relación bidimencional
     @ManyToMany(mappedBy = "roles")
-    List<Usuario> usuarios;
+    @JsonBackReference
+    private List<Usuario> usuarios;
 }
