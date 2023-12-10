@@ -10,6 +10,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.SwaggerDefinition;
 import io.swagger.annotations.Tag;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -80,24 +81,24 @@ public class UsuarioController {
 
         Map<String, Object> response = new HashMap<>();
         Usuario usuario = usuarioService.findByUserName(authentication.getName());
-        if(!image.isEmpty()) {
-            String nombreImage =
-                    UUID.randomUUID().toString()+"_"+image.getOriginalFilename().replace(" ", "");
-            Path uploads = Paths.get("uploads");
-            Path path = uploads.resolve(nombreImage).toAbsolutePath();
-            try {
-                Files.copy(image.getInputStream(), path);
-            }catch (IOException e) {
-                response.put("Error", e.getMessage().concat(e.getCause().getMessage()));
-                return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+
+        try {
+            if (image.isEmpty()) {
+                throw new BadRequestException("La imagen está vacía");
             }
+
+            String nombreImage = UUID.randomUUID().toString() + "_" + image.getOriginalFilename().replace(" ", "");
+            Path uploads = Paths.get("upload");
+            Path path = uploads.resolve(nombreImage).toAbsolutePath();
+
+            Files.copy(image.getInputStream(), path);
 
             String oldImage = usuario.getImagen();
 
-            if(oldImage != null && oldImage.length() > 0 && !oldImage.startsWith("http")) {
+            if (oldImage != null && oldImage.length() > 0 && !oldImage.startsWith("http")) {
                 Path oldPath = uploads.resolve(oldImage).toAbsolutePath();
                 File oldFileImage = oldPath.toFile();
-                if(oldFileImage.exists() && oldFileImage.canRead()) {
+                if (oldFileImage.exists() && oldFileImage.canRead()) {
                     oldFileImage.delete();
                 }
             }
@@ -105,8 +106,24 @@ public class UsuarioController {
             usuario.setImagen(nombreImage);
             usuarioService.actualizar(usuario);
             response.put("usuario", usuario);
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (IOException e) {
+            // Manejo de la excepción de IO
+            LoggerFactory.getLogger(UsuarioController.class).error("Error al procesar la imagen", e);
+            response.put("error", "Error al procesar la imagen");
+            response.put("message", e.getMessage());
+            response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.put("date", LocalDateTime.now());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        } catch (RestException e) {
+            // Manejo de la excepción personalizada
+            LoggerFactory.getLogger(UsuarioController.class).error("Error al procesar la imagen", e);
+            response.put("error", e.getErrorDto().getError());
+            response.put("message", e.getMessage());
+            response.put("status", e.getErrorDto().getStatus());
+            response.put("date", LocalDateTime.now());
+            return ResponseEntity.status(e.getErrorDto().getStatus()).body(response);
         }
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
 
@@ -162,16 +179,16 @@ public class UsuarioController {
 
     // Obtiene la imagen de un usuario
     //@Secured({"ROLE_ADMIN", "ROLE_USER"})
-    @GetMapping("/uploads/img/{name:.+}")
+    @GetMapping("/upload/img/{name:.+}")
     public ResponseEntity<Resource> getImage(@PathVariable String name) throws InternalServerErrorException {
 
-        Path path = Paths.get("uploads").resolve(name).toAbsolutePath();
+        Path path = Paths.get("upload").resolve(name).toAbsolutePath();
         Resource resource = null;
         try {
             resource = new UrlResource(path.toUri());
             if(!resource.exists()) {
                 try {
-                    path = Paths.get("uploads").resolve("default.png").toAbsolutePath();
+                    path = Paths.get("upload").resolve("default.png").toAbsolutePath();
                     resource = new UrlResource(path.toUri());
                 } catch(MalformedURLException ex) {
                     throw new InternalServerErrorException(
