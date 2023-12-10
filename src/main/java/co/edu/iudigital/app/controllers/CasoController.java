@@ -26,16 +26,19 @@ public class CasoController {
     @Autowired
     private ICasoService casoService;
 
-    @ApiOperation(value = "Obtiene todos casos", responseContainer = "List",
+
+    @ApiOperation(value = "Obtiene todos casos",
+            responseContainer = "List",
             produces = "application/json",
             httpMethod = "GET")
-
     @GetMapping
     @ResponseStatus(code = HttpStatus.OK)
     public ResponseEntity<List<CasoDTO>> index(){
         return ResponseEntity
                 .ok()
-                .body(casoService.consultarTodos());
+                .body(
+                        casoService.consultarTodos()
+                );
     }
 
     @Secured({"ROLE_ADMIN","ROLE_USER"})
@@ -49,6 +52,8 @@ public class CasoController {
     public ResponseEntity<Caso> create(@Valid @RequestBody CasoDTO casoDTO)
             throws RestException {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(casoService.crear(casoDTO));
+                .body(
+                        casoService.crear(casoDTO)
+                );
     }
 }
