@@ -27,7 +27,7 @@ public class UsuarioDTO {
 
     String imagen;
 
-    boolean disponibilidad;
+    boolean enabled;
 
     List<String> roles;
 
